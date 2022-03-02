@@ -3,53 +3,39 @@ import React from 'react';
 import { runInAction, observable, createAtom, autorun } from 'mobx';
 import { observer } from 'mobx-react';
 
-let vb = 'ok';
+const skeleton = observable.box(() => <div>not loaded</div>);
+setTimeout(() => installApp(skeleton), 1000);
 
-const atom = createAtom('my-at', onBecomeObserved, onBecomeUnobserved);
-function getV() {
-    if (atom.reportObserved()) {
-        return vb;
-    } else {
-        return '100';
-    }
-}
-let tok = undefined;
-function onBecomeObserved() {
-    tok = setTimeout(() => {
-        vb = '101';
-        atom.reportChanged()
-
-        tok = undefined;
-    }, 1000);
-}
-function onBecomeUnobserved() {
-    if (tok != null) {
-        clearTimeout(tok)
-        tok = undefined;
-    }
-}
-
-
-const v = observable.box(4);
-
-const App = observer(() => {
+const RootApp = observer(() => {
+    const Skeleton = skeleton.get();
     return (
-        <div>
-            1-2-3-{v.get()}
-            <br/>
-            vb={getV()}
-        </div>
+        <Skeleton/>
     );
 });
 
-let i = 0;
-setInterval(() => {
-    runInAction(() => {
-        v.set(i++);
-    });
-}, 500);
-
 ReactDOM.render(
-    <App/>,
+    <RootApp/>,
     document.getElementById('root')
 );
+
+function installApp(skeleton) {
+    const color = observable.box('red');
+    setInterval(updateColorPeriodically, 300);
+    runInAction(() => {
+        skeleton.set(observer(() => {
+            return (
+                <div>
+                    Color:
+                    <div style={{ width: 20, height: 20, backgroundColor: color.get() }}>
+                    </div>
+                </div>
+            );
+        }));
+    });
+
+    const colorOptions = ['red', 'green', 'blue'];
+    function updateColorPeriodically() {
+        const nextIndex = (colorOptions.indexOf(color.get()) + 1) % colorOptions.length;
+        runInAction(() => color.set(colorOptions[nextIndex]));
+    }
+}
